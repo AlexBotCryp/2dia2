@@ -1,0 +1,4 @@
+python-binance==1.0.29
+APScheduler==3.6.3
+requests
+pytz
