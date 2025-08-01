@@ -6,27 +6,17 @@ from binance.client import Client
 from binance.enums import *
 import os
 
-# === CONFIGURACIÓN DEL USUARIO ===
-# Claves API de Binance
 BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
 BINANCE_SECRET_KEY = os.getenv("BINANCE_SECRET_KEY")
-
-# OpenAI GPT
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Telegram
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Criptomonedas objetivo
 COINS = ["BTCUSDC", "DOGEUSDC", "TRXUSDC"]
+MIN_USDC = 10
+MARGIN = 0.004
+INTERVAL = 20
 
-# Parámetros
-MIN_USDC = 10  # mínimo requerido para operar
-MARGIN = 0.004  # margen de beneficio deseado (0.4%)
-INTERVAL = 20  # segundos entre cada análisis
-
-# === INICIALIZACIÓN ===
 client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY)
 openai.api_key = OPENAI_API_KEY
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
@@ -43,11 +33,7 @@ def send_telegram(message):
     bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
 
 def analyze_market():
-    prompt = f"""
-    Analiza el mercado actual de {COINS}. Basado en volumen, variación de precio, y comportamiento reciente,
-    decide cuál tiene mejor potencial para microtrading en los próximos minutos. 
-    Responde solo con el símbolo exacto (ej: BTCUSDC, TRXUSDC o DOGEUSDC).
-    """
+    prompt = f"Analiza el mercado de {COINS} y dime cuál tiene más potencial ahora para microtrading. Solo responde con el símbolo exacto (ej: BTCUSDC, TRXUSDC, DOGEUSDC)."
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -60,24 +46,19 @@ def analyze_market():
 
 def trade():
     usdc_balance = get_balance("USDC")
-
     if usdc_balance >= MIN_USDC:
         symbol = analyze_market()
         if symbol not in COINS:
             print("Respuesta inválida de IA:", symbol)
             return
-
         price = get_price(symbol)
-        qty = round(usdc_balance / price * 0.98, 5)  # usa 98% del balance para evitar errores
-
+        qty = round(usdc_balance / price * 0.98, 5)
         try:
             order = client.order_market_buy(symbol=symbol, quantity=qty)
             send_telegram(f"✅ Comprado {qty} de {symbol} a {price}")
         except Exception as e:
             print("Error al comprar:", e)
-
     else:
-        # Si no hay USDC, intentamos vender lo que tengamos
         for coin in COINS:
             coin_name = coin.replace("USDC", "")
             balance = get_balance(coin_name)
@@ -90,7 +71,6 @@ def trade():
                 except Exception as e:
                     print(f"Error vendiendo {coin_name}:", e)
 
-# === BUCLE PRINCIPAL ===
 while True:
     try:
         trade()
