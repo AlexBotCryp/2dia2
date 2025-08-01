@@ -1,7 +1,6 @@
 import time
 import openai
 import requests
-import telegram
 from binance.client import Client
 from binance.enums import *
 import os
@@ -19,7 +18,6 @@ INTERVAL = 20
 
 client = Client(BINANCE_API_KEY, BINANCE_SECRET_KEY)
 openai.api_key = OPENAI_API_KEY
-bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
 def get_balance(symbol="USDC"):
     balance = client.get_asset_balance(asset=symbol)
@@ -30,7 +28,12 @@ def get_price(symbol):
     return float(ticker['price'])
 
 def send_telegram(message):
-    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+    try:
+        requests.post(url, data=data)
+    except Exception as e:
+        print("Error enviando a Telegram:", e)
 
 def analyze_market():
     prompt = f"Analiza el mercado de {COINS} y dime cuál tiene más potencial ahora para microtrading. Solo responde con el símbolo exacto (ej: BTCUSDC, TRXUSDC, DOGEUSDC)."
